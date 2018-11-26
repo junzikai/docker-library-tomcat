@@ -53,7 +53,7 @@ ENV GPG_KEYS 05AB33110949707C93A279E3D3EFE6B686867BA6 07E48665A34DCAFAE522E5E626
 
 ENV TOMCAT_MAJOR 8
 ENV TOMCAT_VERSION 8.5.32
-ENV TOMCAT_SHA512 fc010f4643cb9996cad3812594190564d0a30be717f659110211414faf8063c61fad1f18134154084ad3ddfbbbdb352fa6686a28fbb6402d3207d4e0a88fa9ce
+ENV TOMCAT_SHA512 1084c067eec2bd27ed2aa5a3729cdc27d0beddbc41968a7004754e75dd88a6703f5fc0e3a01f262cfe2b5d13ed58c95dca1c43bc5ae8789141a11e11f72edd89
 
 ENV TOMCAT_TGZ_URLS \
 # https://issues.apache.org/jira/browse/INFRA-8753?focusedCommentId=14735394#comment-14735394
@@ -78,9 +78,9 @@ RUN set -eux; \
 	apt-get install -y --no-install-recommends gnupg dirmngr; \
 	\
 	export GNUPGHOME="$(mktemp -d)"; \
-#	for key in $GPG_KEYS; do \
-#		gpg --keyserver ha.pool.sks-keyservers.net --recv-keys "$key"; \
-#	done; \
+	for key in $GPG_KEYS; do \
+		gpg --batch --keyserver ha.pool.sks-keyservers.net --recv-keys "$key"; \
+	done; \
 	\
 	apt-get install -y --no-install-recommends wget ca-certificates; \
 	\
@@ -146,7 +146,12 @@ RUN set -eux; \
 	\
 # sh removes env vars it doesn't support (ones with periods)
 # https://github.com/docker-library/tomcat/issues/77
-	find ./bin/ -name '*.sh' -exec sed -ri 's|^#!/bin/sh$|#!/usr/bin/env bash|' '{}' +
+	find ./bin/ -name '*.sh' -exec sed -ri 's|^#!/bin/sh$|#!/usr/bin/env bash|' '{}' +; \
+	\
+# fix permissions (especially for running as non-root)
+# https://github.com/docker-library/tomcat/issues/35
+	chmod -R +rX .; \
+	chmod 777 logs work
 
 # verify Tomcat Native is working properly
 RUN set -e \
